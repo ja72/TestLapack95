@@ -14,9 +14,8 @@
     use iso_fortran_env
     implicit none
     
-    integer, parameter :: P6 = selected_real_kind( p=6 )
-    integer, parameter :: P12 = selected_real_kind( p=12 )
-    integer, parameter :: float = P12
+    integer, parameter :: float = real64
+    real(real64), parameter :: prec = 2**(-53d0)
     character(len=*), parameter :: fmt0 = '(*(g0,1x))'
     character(len=*), parameter :: fmtw = '(*(g12.4,1x))'    
     ! Body of TestLapack95
@@ -24,10 +23,10 @@
     
     call random_seed()
     
-    call test_eigv(n=7)
     call test_lapack95(n=1300)
+    call test_error(n_start=4, iter=20, lambda=1.67e0)
+    call test_eigv(n=7)
     
-    !call test_error(n_start=4, iter=20, lambda=1.67e0)
     
     !call bench_lapack95(n_start=48, iter=25, lambda=0.75e0)
     ! measured speeds on large arrays > 1000
@@ -47,7 +46,7 @@
     call random_number(a)
     call random_number(b)    
     do i=1,n
-        a(i,n-i+1) = a(i,i)/2.0_P6 + 1.0_P6
+        a(i,n-i+1) = a(i,i)/2.0_float + 1.0_float
         b(i) = 2*b(i)-1
     end do
     end subroutine
@@ -87,7 +86,6 @@
     end subroutine
     
     subroutine test_lapack95(n)
-    real(8), parameter :: prec = 2**(-53d0)
     integer, intent(in) :: n
     real(float), allocatable :: A(:,:), LU(:,:)
     real(float), allocatable :: b(:), x(:), xe(:)
@@ -143,7 +141,7 @@
     else
         n = n_start
     end if
-    print '(1x,a8,1x,a)', 'n', 'residual'
+    print '(1x,a8,1x,a,1x,a)', 'n', 'residual', 'r/(n*prec)'
     do i=1,iter
         allocate(A(n,n))
         allocate(b(n))
@@ -162,12 +160,12 @@
             call SYSTEM_CLOCK(toc, rate)
             time = (toc-tic)/dble(rate)
             repeat = repeat + 1
-            if( time>1 ) then
+            if( time>0.25 ) then
                 exit
             end if
         end do
         ee = ee/repeat
-        print '(1x,i8,1x,g)', n, ee
+        print '(1x,i8,1x,g,1x,g0.4)', n, ee, (ee/prec/n)
         
         deallocate(A,b,ipiv)
         
